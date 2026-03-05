@@ -10,14 +10,14 @@ const supabase = createClient(
 
 // --- Config ---
 const STATUS_CONFIG = {
-  pending:          { label: "Pending",          color: "#F59E0B", bg: "#FEF3C7", dot: "#F59E0B" },
-  first_interview:  { label: "1st Interview",    color: "#3B82F6", bg: "#DBEAFE", dot: "#3B82F6" },
-  second_interview: { label: "2nd Interview",    color: "#6366F1", bg: "#E0E7FF", dot: "#6366F1" },
-  interview:        { label: "Interview 🎯",     color: "#8B5CF6", bg: "#EDE9FE", dot: "#8B5CF6" },
-  offer:            { label: "Offer! 🎉",        color: "#10B981", bg: "#D1FAE5", dot: "#10B981" },
+  pending: { label: "Pending", color: "#F59E0B", bg: "#FEF3C7", dot: "#F59E0B" },
+  first_interview: { label: "1st Interview", color: "#3B82F6", bg: "#DBEAFE", dot: "#3B82F6" },
+  second_interview: { label: "2nd Interview", color: "#6366F1", bg: "#E0E7FF", dot: "#6366F1" },
+  interview: { label: "Interview 🎯", color: "#8B5CF6", bg: "#EDE9FE", dot: "#8B5CF6" },
+  offer: { label: "Offer! 🎉", color: "#10B981", bg: "#D1FAE5", dot: "#10B981" },
   failed_interview: { label: "Failed Interview", color: "#F97316", bg: "#FFF7ED", dot: "#F97316" },
-  rejected:         { label: "Rejected",         color: "#EF4444", bg: "#FEE2E2", dot: "#EF4444" },
-  ghosted:          { label: "Ghosted",          color: "#6B7280", bg: "#F3F4F6", dot: "#9CA3AF" },
+  rejected: { label: "Rejected", color: "#EF4444", bg: "#FEE2E2", dot: "#EF4444" },
+  ghosted: { label: "Ghosted", color: "#6B7280", bg: "#F3F4F6", dot: "#9CA3AF" },
 };
 
 const STATUS_ORDER = ["pending", "first_interview", "second_interview", "interview", "offer", "failed_interview", "rejected", "ghosted"];
@@ -170,6 +170,7 @@ export default function App() {
   }, [user]);
 
   // Auto-ghost pending apps older than threshold
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!apps.length) return;
     apps.forEach(a => {
@@ -309,10 +310,10 @@ export default function App() {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
           {[
-            { label: "TOTAL APPLIED",   value: stats.total,              color: "#6366F1" },
-            { label: "RESPONSE RATE",   value: `${stats.responseRate}%`, color: "#F59E0B" },
-            { label: "INTERVIEW RATE",  value: `${stats.interviewRate}%`,color: "#8B5CF6" },
-            { label: "ACTIVE",          value: stats.pending,            color: "#10B981" },
+            { label: "TOTAL APPLIED", value: stats.total, color: "#6366F1" },
+            { label: "RESPONSE RATE", value: `${stats.responseRate}%`, color: "#F59E0B" },
+            { label: "INTERVIEW RATE", value: `${stats.interviewRate}%`, color: "#8B5CF6" },
+            { label: "ACTIVE", value: stats.pending, color: "#10B981" },
           ].map(s => (
             <div key={s.label} className="stat-card" style={{ background: "#141420", border: "1px solid #1E1E30", borderRadius: 10, padding: "14px 16px", transition: "transform 0.2s" }}>
               <div style={{ fontSize: 9, color: "#4B5563", letterSpacing: "0.12em", marginBottom: 6 }}>{s.label}</div>
