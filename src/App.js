@@ -151,6 +151,50 @@ export default function App() {
   const [filter, setFilter] = useState("all");
   const [newApp, setNewApp] = useState({ company: "", appliedDate: "", status: "pending", notes: "" });
   const [ghostDays, setGhostDays] = useState(30);
+  const [customStatuses, setCustomStatuses] = useState([]);
+  const [showManageStatuses, setShowManageStatuses] = useState(false);
+  const [newStatusLabel, setNewStatusLabel] = useState("");
+
+  // All statuses combined — built-in + custom
+  const allStatusConfig = {
+    ...STATUS_CONFIG,
+    ...Object.fromEntries(
+      customStatuses.map(s => [
+        s.key,
+        { label: s.label, color: "#A78BFA", bg: "#EDE9FE", dot: "#A78BFA" }
+      ])
+    ),
+  };
+  const allStatusOrder = [...STATUS_ORDER, ...customStatuses.map(s => s.key)];
+
+  async function fetchCustomStatuses() {
+    const { data, error } = await supabase
+      .from("custom_statuses")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (!error) setCustomStatuses(data);
+  }
+
+  async function addCustomStatus() {
+    if (!newStatusLabel.trim()) return;
+    const key = "custom_" + newStatusLabel.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
+    const { data, error } = await supabase
+      .from("custom_statuses")
+      .insert([{ key, label: newStatusLabel.trim(), user_id: user.id }])
+      .select();
+    if (!error) {
+      setCustomStatuses(prev => [...prev, data[0]]);
+      setNewStatusLabel("");
+    }
+  }
+
+  async function deleteCustomStatus(key) {
+    const { error } = await supabase
+      .from("custom_statuses")
+      .delete()
+      .eq("key", key);
+    if (!error) setCustomStatuses(prev => prev.filter(s => s.key !== key));
+  }
 
   // Check if user is already logged in on load
   useEffect(() => {
@@ -164,9 +208,12 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load apps from Supabase when user logs in
+  // Load apps and custom statuses from Supabase when user logs in
   useEffect(() => {
-    if (user) fetchApps();
+    if (user) {
+      fetchApps();
+      fetchCustomStatuses();
+    }
   }, [user]);
 
   // Auto-ghost pending apps older than threshold
@@ -292,6 +339,12 @@ export default function App() {
               </select>
             </div>
             <button
+              onClick={() => setShowManageStatuses(s => !s)}
+              style={{ background: "transparent", border: "1px solid #1E1E30", color: showManageStatuses ? "#A78BFA" : "#4B5563", borderRadius: 8, padding: "8px 12px", fontSize: 11, cursor: "pointer" }}
+            >
+              ✏️ STATUSES
+            </button>
+            <button
               onClick={() => setShowAdd(s => !s)}
               style={{ background: showAdd ? "#6366F1" : "#1E1E2E", border: "1px solid #333", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 12, cursor: "pointer", letterSpacing: "0.05em" }}
             >
@@ -325,14 +378,14 @@ export default function App() {
         <div style={{ background: "#141420", border: "1px solid #1E1E30", borderRadius: 10, padding: "14px 16px", marginBottom: 24 }}>
           <div style={{ fontSize: 9, color: "#4B5563", letterSpacing: "0.12em", marginBottom: 10 }}>STATUS BREAKDOWN</div>
           <div style={{ display: "flex", gap: 2, height: 8, borderRadius: 4, overflow: "hidden", background: "#0F0F13" }}>
-            {STATUS_ORDER.map(key => {
+            {allStatusOrder.map(key => {
               const count = apps.filter(a => a.status === key).length;
               if (!count) return null;
-              return <div key={key} style={{ flex: count, background: STATUS_CONFIG[key].dot, transition: "flex 0.5s ease" }} title={`${STATUS_CONFIG[key].label}: ${count}`} />;
+              return <div key={key} style={{ flex: count, background: allStatusConfig[key].dot, transition: "flex 0.5s ease" }} title={`${allStatusConfig[key].label}: ${count}`} />;
             })}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 10 }}>
-            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
+            {Object.entries(allStatusConfig).map(([key, cfg]) => {
               const count = apps.filter(a => a.status === key).length;
               if (!count) return null;
               return (
@@ -344,6 +397,36 @@ export default function App() {
             })}
           </div>
         </div>
+
+        {/* Manage custom statuses panel */}
+        {showManageStatuses && (
+          <div style={{ background: "#141420", border: "1px solid #A78BFA", borderRadius: 10, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontSize: 9, color: "#A78BFA", letterSpacing: "0.1em", marginBottom: 12 }}>CUSTOM STATUSES</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input
+                value={newStatusLabel}
+                onChange={e => setNewStatusLabel(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && addCustomStatus()}
+                placeholder="e.g. Technical Test, HR Screen..."
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button onClick={addCustomStatus} style={{ background: "#A78BFA", border: "none", color: "#fff", borderRadius: 6, padding: "8px 14px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
+                + ADD
+              </button>
+            </div>
+            {customStatuses.length === 0 && (
+              <div style={{ fontSize: 11, color: "#374151" }}>No custom statuses yet.</div>
+            )}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {customStatuses.map(s => (
+                <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, background: "#EDE9FE", borderRadius: 6, padding: "4px 10px" }}>
+                  <span style={{ fontSize: 11, color: "#A78BFA", fontWeight: 500 }}>{s.label}</span>
+                  <button onClick={() => deleteCustomStatus(s.key)} style={{ background: "none", border: "none", color: "#A78BFA", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.6 }}>✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Add form */}
         {showAdd && (
@@ -360,7 +443,7 @@ export default function App() {
             <div>
               <div style={{ fontSize: 9, color: "#4B5563", letterSpacing: "0.1em", marginBottom: 4 }}>STATUS</div>
               <select value={newApp.status} onChange={e => setNewApp(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
-                {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
+                {allStatusOrder.map(s => <option key={s} value={s}>{allStatusConfig[s].label}</option>)}
               </select>
             </div>
             <div>
@@ -373,7 +456,7 @@ export default function App() {
 
         {/* Filter tabs */}
         <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-          {["all", ...STATUS_ORDER].map(f => {
+          {["all", ...allStatusOrder].map(f => {
             const count = f === "all" ? apps.length : apps.filter(a => a.status === f).length;
             if (f !== "all" && !count) return null;
             return (
@@ -383,7 +466,7 @@ export default function App() {
                 color: filter === f ? "#fff" : "#4B5563",
                 borderRadius: 6, padding: "4px 10px", fontSize: 10, cursor: "pointer", letterSpacing: "0.05em",
               }}>
-                {f === "all" ? "ALL" : STATUS_CONFIG[f].label.toUpperCase()} <span style={{ opacity: 0.6 }}>{count}</span>
+                {f === "all" ? "ALL" : allStatusConfig[f].label.toUpperCase()} <span style={{ opacity: 0.6 }}>{count}</span>
               </button>
             );
           })}
@@ -406,7 +489,7 @@ export default function App() {
           )}
 
           {!loading && filtered.map((app, i) => {
-            const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.pending;
+            const cfg = allStatusConfig[app.status] || STATUS_CONFIG.pending;
             const days = daysSince(app.applied_date);
             return (
               <div key={app.id} className="app-row" style={{
@@ -424,7 +507,7 @@ export default function App() {
                     onChange={e => updateStatus(app.id, e.target.value)}
                     style={{ background: cfg.bg, color: cfg.color, border: "none", borderRadius: 5, padding: "3px 8px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}
                   >
-                    {STATUS_ORDER.map(s => <option key={s} value={s} style={{ background: "#1A1A24", color: "#E2E8F0" }}>{STATUS_CONFIG[s].label}</option>)}
+                    {allStatusOrder.map(s => <option key={s} value={s} style={{ background: "#1A1A24", color: "#E2E8F0" }}>{allStatusConfig[s].label}</option>)}
                   </select>
                 </div>
                 <input
