@@ -170,7 +170,6 @@ export default function App() {
   }, [user]);
 
   // Auto-ghost pending apps older than threshold
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!apps.length) return;
     apps.forEach(a => {
@@ -178,7 +177,7 @@ export default function App() {
         updateStatus(a.id, "ghosted", `Auto-ghosted after ${ghostDays} days`);
       }
     });
-  }, [ghostDays, apps.length]);
+  }); // intentionally no dependency array — runs after every render
 
   async function fetchApps() {
     setLoading(true);
